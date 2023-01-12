@@ -130,38 +130,34 @@ Here's another example making use of the <b>file specifiers</b>:
 
 ```json
 {
-	"locations": [
+	"path": "C:\\Users\\[username]\\Saved Pictures",
+	"fileExcepts": [
+		""
+	],
+	"folderFilter": [
 		{
-			"path": "C:\\Users\\[username]\\Saved Pictures",
-			"fileExcepts": [
-				""
-			],
-			"folderFilter": [
-				{
-					"name": "Wallpapers",
-					"exts": [
-						"`wallpaper`.*" 
-					]
-				},
-				{
-					"name": "Art Stuff",
-					"exts": [
-						"`sketch`.*",
-						"`art`.*"
-					]
-				},
-				{
-					"name": "Krita projects",
-					"exts": [
-						"*.kra"
-					]
-				},
-				{
-					"name": "Misc Pictures",
-					"exts": [
-						"*"
-					]
-				}
+			"name": "Wallpapers",
+			"exts": [
+				"`wallpaper`.*" 
+			]
+		},
+		{
+			"name": "Art Stuff",
+			"exts": [
+				"`sketch`.*",
+				"`art`.*"
+			]
+		},
+		{
+			"name": "Krita projects",
+			"exts": [
+				"*.kra"
+			]
+		},
+		{
+			"name": "Misc Pictures",
+			"exts": [
+				"*"
 			]
 		}
 	]
