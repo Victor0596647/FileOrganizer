@@ -1,0 +1,18 @@
+{
+	"locations": [
+		{
+			"path": "",
+			"fileExcepts": [
+				""
+			],
+			"folderFilter": [
+				{
+					"name": "",
+					"exts": [
+						""
+					]
+				}
+			]
+		}
+	]
+}
