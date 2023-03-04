@@ -1,44 +1,51 @@
 import os, shutil, json
 from stat import *
+from time import sleep
+from rich import print
+from rich.console import Console
+from rich.progress import Progress
 
 # The config file
 jsonPath = "filterConfig.json"
 
+console = Console()
+
 def fileChecker(path: str) -> dict[str, list[dict[str, str]]]:
     fileList = {"files":[]}
+    # Checks the file type and returns a list [filetype, filename, shortpath, extension]
+    def checkFileExt(file: str) -> dict[str, str] | None:
+        isFile = os.path.isfile(file)
+        shortPath = file.rsplit("\\", 1)[1]
+        if isFile == False:
+            fileInfo = {
+                "fileType": "dir",
+                "shortPath": shortPath,
+                "fileExt": ""
+            }
+            return (fileInfo)
+        if isFile == True:
+            # Checks if file has an extension
+            try:
+                fileExt = shortPath.rsplit(".", 1)[1]
+            except IndexError:
+                fileExt = ""
+            fileInfo = {
+                "fileType": "file",
+                "fileName": shortPath.rsplit(".", 1)[0],
+                "shortPath": shortPath,
+                "fileExt": fileExt
+            }
+            return (fileInfo)
+
     try:
         for f in os.listdir(path):
             pathname = os.path.join(path, f)
             fileList["files"].append(checkFileExt(pathname))
+        print(f"{len(fileList['files'])} total file(s)")
         return (fileList)
     except FileNotFoundError:
         print("Please make sure your path leads to an existing directory. Could not find path specified: '"+ path +"'")
         exit()
-
-# Checks the file type and returns a list [filetype, filename, shortpath, extension]
-def checkFileExt(filename: str) -> dict[str, str] | None:
-    mode = os.lstat(filename).st_mode
-    shortPath = filename.rsplit("\\", 1)[1]
-    if S_ISDIR(mode):
-        fileInfo = {
-            "fileType": "dir",
-            "shortPath": shortPath,
-            "fileExt": ""
-        }
-        return (fileInfo)
-    if S_ISREG(mode):
-        # Checks if file has an extension
-        try:
-            fileExt = shortPath.rsplit(".", 1)[1]
-        except IndexError:
-            fileExt = ""
-        fileInfo = {
-            "fileType": "file",
-            "fileName": shortPath.rsplit(".", 1)[0],
-            "shortPath": shortPath,
-            "fileExt": fileExt
-        }
-        return (fileInfo)
 
 # File filter functions that organizes and returns a dict list with each of them having their destination folder
 def fileFilter(fileList: dict[str, list[dict[str,str]]], dirJson: dict) -> dict[str, list[dict]]:
@@ -47,17 +54,17 @@ def fileFilter(fileList: dict[str, list[dict[str,str]]], dirJson: dict) -> dict[
     for file in fileList['files']:
         # Skips if it is a directory
         if file['fileType'] != "file":
-            #print(f"directory detected for {file['shortPath']}, skipping...")
+            print(f"directory detected for '{file['shortPath']}', skipping...")
             continue
         isException = False
         # File Exclusion Handling
         def addToExc(file: dict[str,str]):
+            nonlocal isException
             #print(f'Found an exception for {file["shortPath"]}')
             fileExcepts.append(file["shortPath"])
             isException = True
         
         for fileExc in dirJson["fileExcepts"]:
-
             if fileExc.rfind(".") != -1:
                 splitExt = fileExc.rsplit(".", 1)
                 # If statements when an '*' is involved
@@ -121,18 +128,18 @@ def fileFilter(fileList: dict[str, list[dict[str,str]]], dirJson: dict) -> dict[
             movable = True
             for filel in organizedList["fileDestination"]:
                 if filel['fileInfo'] == jsonValue['fileInfo']:
-                    #print(f"Couldn't organize {filel['fileInfo']} because the same file already has been sorted, skipping...")
+                    # print(f"Couldn't organize {filel['fileInfo']} because the same file already has been sorted, skipping...")
                     movable = False
                     break
             if movable is True:
                 organizedList["fileDestination"].append(jsonValue)
-                #print(jsonValue)
+                # print(jsonValue)
 
         if isException is False:
             # File Filter handling
             for filter in dirJson["folderFilter"]:
                 for ext in filter["exts"]:
-                    if ext.rfind(".") != -1:
+                    if ext.rfind(".") == True:
                         splitExt = ext.rsplit(".", 1)
                         # If statements when an '*' is involved
                         if splitExt[0] == "*" or splitExt[1] == "*":
@@ -187,43 +194,63 @@ def fileFilter(fileList: dict[str, list[dict[str,str]]], dirJson: dict) -> dict[
                         addToList({"fileInfo": file, "dest": f'{dirJson["path"]}\\{filter["name"]}'})
                         break
     #print(organizedList)
-    print(f"file exclusions {fileExcepts}")
+    print(f"Excluded {len(fileExcepts)} file(s)")
     return (organizedList)
 
 def fileOrganize(dirJson: dict) -> None:
     path = dirJson["path"]
     fileList = fileChecker(path)
-    print("Organizing files...")
+    print(f"Organizing files from '{path}'")
+    console.line(1)
+
     organizedList = fileFilter(fileList, dirJson)
-    print("starting to move files")
-    for fil in organizedList["fileDestination"]:
-        try:
-            os.mkdir(os.path.join(fil["dest"]), 0o666)
-            print(f"Created new directory '{fil['dest']}'")
-            shutil.move(path + "\\" + fil["fileInfo"]["shortPath"], fil['dest'], shutil.copy)
-            print(path + "\\" + fil["fileInfo"]["shortPath"] + " Moved to " + fil['dest'])
-        except FileExistsError:
+    totalFileCount = len(organizedList["fileDestination"])
+    print(f"Selected {totalFileCount} file(s) for organization")
+    console.line(1)
+
+    print("Beginning to move files...")
+    sleep(2.5)
+    console.line(1)
+
+    with Progress() as progress:
+        fileTask = progress.add_task(f"Moving files in [bold]{path}", total=totalFileCount)
+        for fil in organizedList["fileDestination"]:
+            sleep(0.0125)
             try:
+                os.mkdir(os.path.join(fil["dest"]), 0o666)
+                print(f"[red]Created new directory [blue]{fil['dest']}")
                 shutil.move(path + "\\" + fil["fileInfo"]["shortPath"], fil['dest'], shutil.copy)
-                print(path + "\\" + fil["fileInfo"]["shortPath"] + " Moved to " + fil['dest'])
-            except shutil.Error:
-                print(f"{fil['fileInfo']['shortPath']} already exists in {fil['dest']}")
+                print("[blue]" + path + "\\" + fil["fileInfo"]["shortPath"] + "[red] Moved to [blue]" + fil['dest'])
+            except FileExistsError:
+                try:
+                    shutil.move(path + "\\" + fil["fileInfo"]["shortPath"], fil['dest'], shutil.copy)
+                    print("[blue]" + path + "\\" + fil["fileInfo"]["shortPath"] + "[red] Moved to [blue]" + fil['dest'])
+                except shutil.Error:
+                    print(f"Could not move {fil['fileInfo']['shortPath']} to {fil['dest']} since file already exists. Skipping...")
+            progress.advance(fileTask, 1)
+    console.bell()
+    console.line(1)
+
+    print(f"[bold green]Finished [not bold white]moving files in [blue]{path}")
 
 # Main Excecution
 def main() -> None:
-    with open(jsonPath, "r") as f:
-        try:
-            filecfg = json.load(f)
-            for loc in filecfg["locations"]:
-                filePath = loc["path"]
-                print(f"Now filtering path: '{filePath}'")
-                try:
-                    fileOrganize(loc)
-                except PermissionError as perm:
-                    print(f"There was an error when moving files in '{filePath}' maybe try running as admin. Error: {perm}")
-                    continue
-        except json.JSONDecodeError as e:
-            print(f"The {jsonPath} configuration file has some syntax errors, please fix them.\n Error Log: {e}")
+    try:
+        with open(jsonPath, "r") as f:
+            try:
+                filecfg = json.load(f)
+                for loc in filecfg["locations"]:
+                    filePath = loc["path"]
+                    print(f"Now on path: '{filePath}'")
+                    try:
+                        fileOrganize(loc)
+                    except PermissionError as perm:
+                        print(f"There was an error when moving files in '{filePath}' maybe try running as admin. Error: {perm}")
+                        continue
+            except json.JSONDecodeError as e:
+                print(f"The {jsonPath} configuration file has some syntax errors, please fix them.\n Error Log: {e}")
+    except FileNotFoundError as e:
+        print(f"'fileConfig.json' file could not be found, please create one. Error: {e}")
 
 if __name__ == "__main__":
     main()
