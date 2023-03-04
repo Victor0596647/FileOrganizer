@@ -166,7 +166,6 @@ Here's another example making use of the <b>file specifiers</b>:
 
 <h2>Running the program</h2>
 
-Running the program is simple, just make sure you python installed and run it in your terminal by using `py fileOrganizer.py` and it should work. Oh and make sure you put the python file somewhere where it isn't in one of the sorting locations or it might also sort the main file itself.
+Running the program is simple, just make sure you python installed and run it in your terminal by using `py fileOrganizer.py` and it should work. Oh and make sure you put the python file somewhere where it isn't in one of the sorting locations or it might also sort the main file itself. 
 
-<h2>Planned Features</h2>
-Soon I will add the rich module to make the sorting process more visually appealing, like with progress bars and such.
+**Note:** You are required to install the **[Rich module](https://github.com/Victor0596647/FileOrganizer/commit/a891f8599e636274448bc0f536ca78c6d7f8733e)** as of now.
